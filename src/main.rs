@@ -1,6 +1,8 @@
 fn main(){
-    println!("euclides algorithm:");
-    gcd(13980,20939);
+    // println!("euclides algorithm:");
+    // gcd(13980,20939);
+    // variables();
+    shadowing();
 
 }
 
@@ -17,4 +19,29 @@ pub fn gcd(mut n:u64, mut m:u64 ) {
         }
         println!("{}",n);   
     
+}
+
+pub fn variables(){
+    const CONST_PI:f32 = 3.14; //por convensao as constantes sao uper case
+    assert_eq!(CONST_PI,3.14);
+    println!("{}",&CONST_PI);
+
+    let a = 10;
+    let x = a;
+    println!("{}",x)
+
+}
+
+pub fn shadowing() {
+    let x: i32 = 22;
+
+    let x = x + 8;
+
+    {
+        let x = x * 2;
+        println!("inner scope {}",x);
+
+    }
+    
+    println!("{}",x);
 }
