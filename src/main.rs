@@ -4,7 +4,34 @@ fn main(){
     // variables();
     // shadowing();
     // slices()
-    string()
+    // string()
+    onwership()
+
+
+}
+fn onwership(){
+    {
+        let point = Box::new((0.25,2.22));//alloc here
+        let label = format!("{:?}",point); //alloc here too
+
+        assert_eq!(label,"(0.25, 2.22)")// true
+    }
+    //label and point are dropped here
+    
+    struct Person {
+        name:String,
+        age:u32
+    }
+
+    let mut composers = Vec::new();
+
+    composers.push(Person { name: "Miles Davis".to_string(), age:65 } );
+    composers.push(Person { name: "John Coltrane".to_string(), age:40 } );
+
+
+    for c in &composers{
+        println!("{} with age: {}",c.name, c.age)
+    }
 
 
 }
@@ -29,11 +56,12 @@ fn string() {
     for l in b_txt {
         println!("{}", l )
 
-        
     };
     println!("{}", &_str )
     
 }
+
+
 
 pub fn slices(){
     let _v: Vec<f64> = vec![ 0.1, 0.2, -1.9 ];
