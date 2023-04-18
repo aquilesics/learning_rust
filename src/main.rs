@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 fn main(){
     // println!("euclides algorithm:");
     // gcd(13980,20939);
@@ -5,10 +6,32 @@ fn main(){
     // shadowing();
     // slices()
     // string()
-    onwership()
-
-
+    // onwership()
+    lifetimes()
 }
+
+fn lifetimes(){
+    struct S<'a> {
+        y: &'a i32 ,
+        x: &'a i32
+    }
+
+    fn f<'a>(r:&i32, s:&S ) -> i32{
+        r + s.x + s.y
+    }
+
+    let a:i32 = 40;
+    let u = S{ x:&10,
+                  y:&20
+                };
+
+    let b = f( &a, &u );
+    
+    print!("{}",&b );
+    
+}
+
+
 fn onwership(){
     {
         let point = Box::new((0.25,2.22));//alloc here
