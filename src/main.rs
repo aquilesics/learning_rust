@@ -1,5 +1,9 @@
 #![allow(dead_code)]
+pub mod math;
 fn main(){
+    type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
+    type GenericResult<T> = Result<T,GenericError>;
+
     // println!("euclides algorithm:");
     // gcd(13980,20939);
     // variables();
@@ -7,8 +11,54 @@ fn main(){
     // slices()
     // string()
     // onwership()
-    lifetimes()
+    // lifetimes()
+    // __cast()
+    // clojure()
+    // let x = bool_to_string(&true);
+    // let y = bool_to_string(&false);
+    // println!("{} {}",x,y)
+    let x = math::divide(&4.,&3.);
+    println!("{}",x.unwrap())
+
+
 }
+
+
+
+fn double_array( v: Vec<i64> ) -> Vec<i64> {
+    let mut _v = Vec::new();
+    for i in v.into_iter() {
+        _v.push(i * 2)
+    }
+    _v
+
+}
+
+fn bool_to_string( b: &bool ) -> String {
+    b.to_string()
+}
+
+fn clojure(){
+    let numbers = [1,2,4,5,7,8,9,10];
+
+    let is_even = | x | x % 2 == 0;
+
+    for n in &numbers{
+        print!("{} is even? :{}\n",n, is_even(n))
+
+    
+    }
+}
+
+fn __cast(){
+   let  _x = 88;
+
+   let _x = _x as u32;
+
+   print!("{}",_x)
+    
+}
+
 
 fn lifetimes(){
     struct S<'a> {
