@@ -1,199 +1,91 @@
-#![allow(dead_code)]
-pub mod math;
-fn main(){
-    type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
-    type GenericResult<T> = Result<T,GenericError>;
-
-    // println!("euclides algorithm:");
-    // gcd(13980,20939);
-    // variables();
-    // shadowing();
-    // slices()
-    // string()
-    // onwership()
-    // lifetimes()
-    // __cast()
-    // clojure()
-    // let x = bool_to_string(&true);
-    // let y = bool_to_string(&false);
-    // println!("{} {}",x,y)
-    let x = math::divide(&4.,&3.);
-    println!("{}",x.unwrap())
+use ::std::fs::{read_to_string, File};
+use std::str::FromStr;
+use apache_avro::schema;
+use apache_avro::types::Value;
+use apache_avro::{from_value, types::Record, Codec, Reader, Schema, Writer};
+use macros::make_answer;
+use proc_macro2::TokenStream;
+use syn::token::Struct;
+use std::any::type_name_of_val;
+use std::collections::btree_set::Union;
+use std::collections::HashMap;
+use std::fmt::DebugStruct;
+use std::time::Instant;
+extern crate macros;
+use syn::{self, token, Expr, ItemStruct};
+// use macros::gen_crtran25_struct;
+use quote::{ quote};
 
 
-}
+fn read_lines(path: &str) -> Result<(), apache_avro::Error> {
+    let mut counter = 0;
 
+    let file = File::open(path).unwrap();
+    let reader = Reader::new(file);
 
+    if let Ok(table) = reader {
+        let s = table.writer_schema();
 
-fn double_array( v: Vec<i64> ) -> Vec<i64> {
-    let mut _v = Vec::new();
-    for i in v.into_iter() {
-        _v.push(i * 2)
-    }
-    _v
-
-}
-
-fn bool_to_string( b: &bool ) -> String {
-    b.to_string()
-}
-
-fn clojure(){
-    let numbers = [1,2,4,5,7,8,9,10];
-
-    let is_even = | x | x % 2 == 0;
-
-    for n in &numbers{
-        print!("{} is even? :{}\n",n, is_even(n))
-
-    
-    }
-}
-
-fn __cast(){
-   let  _x = 88;
-
-   let _x = _x as u32;
-
-   print!("{}",_x)
-    
-}
-
-
-fn lifetimes(){
-    struct S<'a> {
-        y: &'a i32 ,
-        x: &'a i32
-    }
-
-    fn f<'a>(r:&i32, s:&S ) -> i32{
-        r + s.x + s.y
-    }
-
-    let a:i32 = 40;
-    let u = S{ x:&10,
-                  y:&20
+        match s {
+            Schema::Record(r) => {
+                let mut fields_and_types = Vec::new();
+                for i in &r.fields{
+                    let key = &i.name;
+                    let val;
+                    match &i.schema {
+                        Schema::Union(u) => {
+                            match u.variants()[1] {     
+                                Schema::Double => {val = "f64"},
+                                Schema::Float => {val = "f64"},
+                                Schema::Int =>{val = "i64"},
+                                Schema::String =>{val = "String"},
+                                _ => panic!("Error on parse data type: {}",type_name_of_val(u))
+                            }
+                        },
+                        _ =>panic!("error on unwrap schema type")                        
+                    }
+                    let key_val_strg = format!("{}:{}",key,val);
+                    fields_and_types.push(key_val_strg)
                 };
-
-    let b = f( &a, &u );
-    
-    print!("{}",&b );
-    
-}
-
-
-fn onwership(){
-    {
-        let point = Box::new((0.25,2.22));//alloc here
-        let label = format!("{:?}",point); //alloc here too
-
-        assert_eq!(label,"(0.25, 2.22)")// true
-    }
-    //label and point are dropped here
-    
-    struct Person {
-        name:String,
-        age:u32
-    }
-
-    let mut composers = Vec::new();
-
-    composers.push(Person { name: "Miles Davis".to_string(), age:65 } );
-    composers.push(Person { name: "John Coltrane".to_string(), age:40 } );
-
-
-    for c in &composers{
-        println!("{} with age: {}",c.name, c.age)
-    }
-
-
-}
-
-fn string() {
-    let text = "\"dsakjas\" sdl l \"abcdz\n break line\n";
-    // like python raw strings
-    let path = r"C:\Users\_noob\Desktop\partition.sql";
-    //
-    let b_txt = b"abc";
-    let _str = "teste";
-
-   
-
-    print!("{}",text );
-    print!("{}",path );
-    println!(r###"
-                This raw string started with 'r###"'.
-                Therefore it does not end until we reach a quote mark ('"')
-                followed immediately by three pound signs ('###'):
-            "###);
-    for l in b_txt {
-        println!("{}", l )
-
-    };
-    println!("{}", &_str )
-    
-}
-
-
-
-pub fn slices(){
-    let _v: Vec<f64> = vec![ 0.1, 0.2, -1.9 ];
-    let _a:[f64;4]  = [1.,3.,4.,5.];
-
-    let _sv:&[f64] = &_v;
-    let _sa:&[f64] = &_a;
-
-    
-    print(&_v);
-    print(&_a);
-    print(&_a[4..])
-
-
-    // print!("{}{}",_v,_x)
-}
-
-fn print( slc: &[f64] ){
-    for n in slc{
-        print!("{}\n",n )
-    }
-}
-
-pub fn gcd(mut n:u64, mut m:u64 ) {
-    assert!(n != 0 && m != 0  );
-    while m != 0{
-        if m < n{
-            let t: u64 = m;
-                m = n;
-                n = t;
+                let struct_repr = format!("struct CRTRAN25{{ {} }}",fields_and_types.join(",\n"));
+                println!("{}",struct_repr);
             }
-            m = m % n;
-            println!("{}",m);
-        }
-        println!("{}",n);   
-    
+            _=> println!("error on load schema")
+        };
+    };
+    Ok(())
 }
 
-pub fn variables(){
-    const CONST_PI:f32 = 3.14; //por convensao as constantes sao uper case
-    assert_eq!(CONST_PI,3.14);
-    println!("{}",&CONST_PI);
+pub fn main() {
+    // let started = Instant::now();
+    // for i in 0..1 {
+    //     let path = format!(r"C:\Users\xj\repo\learning_rust\data_avro\test_{}.avro", i);
+    //     let _ = read_lines(&path);
+    // }
+    // let ended = started.elapsed().as_secs();
 
-    let a = 10;
-    let x = a;
-    println!("{}",x)
-
-}
-
-pub fn shadowing() {
-    let x: i32 = 22;
-
-    let x = x + 8;
-
-    {
-        let x = x * 2;
-        println!("inner scope {}",x);
-
-    }
+    // println!("levou {} secs", ended);
     
-    println!("{}",x);
+
+    // macro_rules! test {
+    //     ($name:ident,($field:tt : $type:ty))=> {
+    //         // gen_crtran25_struct!( struct $name {$field:$type});
+    //         struct $name {$field:$type}
+    //     };
+    // }
+    let code =   "assert_eq!(1,2)" ;
+    let ast = syn::parse_str::<Expr>(&code).unwrap();
+    println!("{:?}\n\n",ast);
+    let tok:TokenStream = quote!{#ast}.into();
+    println!("{:?}",tok);
+
+    let a = make_answer!( "assert_eq!(1,1)" );
+
+    println!("{:?}",a)
+    
+    
+
+    
+ 
+
 }
