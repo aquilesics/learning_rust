@@ -9,6 +9,8 @@ pandas = "*"
 numpy = "*"
 networkx = "*"
 polars = "*"
+matplotlib = "*"
+scipy = "*"
 
 [dev-packages]
 

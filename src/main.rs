@@ -1,91 +1,146 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 use ::std::fs::{read_to_string, File};
-use std::str::FromStr;
-use apache_avro::schema;
+use apache_avro::schema::{self, Name};
 use apache_avro::types::Value;
 use apache_avro::{from_value, types::Record, Codec, Reader, Schema, Writer};
+use csv::Error;
 use macros::make_answer;
 use proc_macro2::TokenStream;
-use syn::token::Struct;
 use std::any::type_name_of_val;
+use std::collections::btree_map::Keys;
 use std::collections::btree_set::Union;
 use std::collections::HashMap;
+use std::env::temp_dir;
+use std::ffi::OsStr;
 use std::fmt::DebugStruct;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::time::Instant;
+use std::{clone, fs};
+use syn::parse::Parse;
+use syn::token::Struct;
+use toml::value::Date;
 extern crate macros;
-use syn::{self, token, Expr, ItemStruct};
+extern crate parser;
+use syn::{self, parse, token, Expr, FieldsNamed, Ident, ItemStruct, Stmt};
 // use macros::gen_crtran25_struct;
-use quote::{ quote};
+use proc_macro2;
+use quote::quote;
+use serde::Deserialize;
+use toml;
+pub mod utils;
 
+struct DataTable<'a> {
+    src: &'a str,
+    table: Reader<'a, File>,
+    partitions: std::vec::IntoIter<PathBuf>,
+    current_partition: PathBuf,
+}
 
-fn read_lines(path: &str) -> Result<(), apache_avro::Error> {
-    let mut counter = 0;
-
-    let file = File::open(path).unwrap();
-    let reader = Reader::new(file);
-
-    if let Ok(table) = reader {
-        let s = table.writer_schema();
-
-        match s {
-            Schema::Record(r) => {
-                let mut fields_and_types = Vec::new();
-                for i in &r.fields{
-                    let key = &i.name;
-                    let val;
-                    match &i.schema {
-                        Schema::Union(u) => {
-                            match u.variants()[1] {     
-                                Schema::Double => {val = "f64"},
-                                Schema::Float => {val = "f64"},
-                                Schema::Int =>{val = "i64"},
-                                Schema::String =>{val = "String"},
-                                _ => panic!("Error on parse data type: {}",type_name_of_val(u))
-                            }
-                        },
-                        _ =>panic!("error on unwrap schema type")                        
-                    }
-                    let key_val_strg = format!("{}:{}",key,val);
-                    fields_and_types.push(key_val_strg)
-                };
-                let struct_repr = format!("struct CRTRAN25{{ {} }}",fields_and_types.join(",\n"));
-                println!("{}",struct_repr);
+impl DataTable<'_> {
+    fn new(src: &str) -> DataTable<'_> {
+        let mut part = DataTable::get_avro_files(src);
+        let curr = part.next().unwrap();
+        DataTable {
+            src,
+            partitions: part,
+            table: DataTable::get_table(curr.clone()),
+            current_partition: curr.clone(),
+        }
+    }
+    fn next_table(&mut self) -> Option<()> {
+        if let Some(part) = self.partitions.next() {
+            self.current_partition = part.clone();
+            self.table = DataTable::get_table(part);
+            Some(())
+        } else {
+            None
+        }
+    }
+    fn get_table(partition: PathBuf) -> Reader<'static, File> {
+        let file = File::open(partition).unwrap();
+        let reader = Reader::new(file);
+        if let Ok(table) = reader {
+            table
+        } else {
+            panic!("error on create table from avro file")
+        }
+    }
+    fn get_avro_files(src: &str) -> std::vec::IntoIter<PathBuf> {
+        let folder = std::path::Path::new(src);
+        let mut avro_files: Vec<PathBuf> = Vec::new();
+        for file in folder.read_dir().expect("error on iter over path") {
+            if let Ok(_file) = file {
+                let is_file = _file.path().is_file();
+                if is_file && _file.path().extension().unwrap() == "avro" {
+                    let path = _file.path();
+                    avro_files.push(path);
+                }
+            } else {
+                panic!("error on get DirEntry from path")
             }
-            _=> println!("error on load schema")
-        };
-    };
-    Ok(())
+        }
+        avro_files.into_iter()
+    }
+}
+
+fn record_into_hsmap(row: Result<Value, apache_avro::Error>) -> HashMap<String, Box<Value>> {
+    if let Ok(row) = row {
+        if let Value::Record(row) = row {
+            let mut hs = HashMap::new();
+            for column in row {
+                match column.1 {
+                    Value::Union(i, val) => {
+                        hs.insert(column.0, val);
+                    }
+                    _ => panic!("erro ao trasformar row em hashmap"),
+                }
+            }
+            hs
+        } else {
+            panic!("row nao eh do tipo record");
+        }
+    } else {
+        panic!("erro, row do tipo none")
+    }
 }
 
 pub fn main() {
-    // let started = Instant::now();
+    let started = Instant::now();
+
+    let config = utils::load_settings("./config.toml").unwrap();
+    //print!("{:#?}", config);
+
+    let data_table = DataTable::new(&config.input_data.auth_abs_path.as_str());
+
+    let mut iter_dt = data_table.table.into_iter();
+    //let mut x = 0;
+    let mut udv = HashMap::new();
+    while let Some(row) = iter_dt.next() {
+        let hs = record_into_hsmap(row);
+        let k = (**hs.get("str_col2").unwrap()).clone();
+        match &k {
+            Value::String(s) => {
+                
+                udv.entry(s.clone())
+                    .and_modify(|x| *x += 1)
+                    .or_insert(0);
+            }
+            _ => {}
+        }
+
+        //  udv.entry(k).or_insert(0);
+    }
+    print!("\r{:#?}",udv.get("H"));
     // for i in 0..1 {
     //     let path = format!(r"C:\Users\xj\repo\learning_rust\data_avro\test_{}.avro", i);
     //     let _ = read_lines(&path);
     // }
-    // let ended = started.elapsed().as_secs();
+    let ended = started.elapsed().as_secs();
 
-    // println!("levou {} secs", ended);
-    
-
-    // macro_rules! test {
-    //     ($name:ident,($field:tt : $type:ty))=> {
-    //         // gen_crtran25_struct!( struct $name {$field:$type});
-    //         struct $name {$field:$type}
-    //     };
-    // }
-    let code =   "assert_eq!(1,2)" ;
-    let ast = syn::parse_str::<Expr>(&code).unwrap();
-    println!("{:?}\n\n",ast);
-    let tok:TokenStream = quote!{#ast}.into();
-    println!("{:?}",tok);
-
-    let a = make_answer!( "assert_eq!(1,1)" );
-
-    println!("{:?}",a)
-    
-    
-
-    
- 
-
+    println!("\nlevou {} secs", ended);
 }

@@ -1,3 +1,4 @@
+workspace = { members = ["parser"] }
 [package]
 name = "learning_rust"
 version = "0.1.0"
@@ -10,7 +11,10 @@ apache-avro = "0.16.0"
 csv = "1.3.0"
 darling = "0.20.8"
 macros = {path = "./macros"}
+parser  = {path = "./parser"}
 marco = "0.1.0"
 proc-macro2 = "1.0.82"
 quote = "1.0.36"
 syn = { version = "2.0.60", features = ["parsing", "extra-traits"] }
+toml = "0.8.13"
+serde = "1.0.203"
